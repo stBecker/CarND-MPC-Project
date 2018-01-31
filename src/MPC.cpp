@@ -64,7 +64,7 @@ class FG_eval {
 
     // Minimize the value gap between sequential actuations.
     for (size_t t = 0; t < N - 2; t++) {
-      fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+      fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2)*100;
       fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
@@ -99,8 +99,9 @@ class FG_eval {
       AD<double> delta0 = vars[delta_start + t - 1];
       AD<double> a0 = vars[a_start + t - 1];
 
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * x0*x0 + coeffs[3] * x0*x0*x0;
+      AD<double> f_prime = coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * x0*x0;
+      AD<double> psides0 = CppAD::atan(f_prime);
 
 
       // NOTE: The use of `AD<double>` and use of `CppAD`!
@@ -256,6 +257,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
 
+  std::cout << "sol " << solution.x.size() << "vars " << n_vars << std::endl;
+
   // TODO: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
   //
@@ -264,7 +267,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   vector<double> res = { solution.x[delta_start+1], solution.x[a_start+1] };
   //res.insert(res.end(), solution.x.begin() + x_start + 1, solution.x.begin() + x_start + 1 + N);
   //res.insert(res.end(), solution.x.begin() + y_start + 1, solution.x.begin() + y_start + 1 + N);
-  for (size_t i = 0; i < N; i++)
+  for (size_t i = 0; i < N-1; i++)
   {
     res.push_back(solution.x[x_start + i]);
     res.push_back(solution.x[y_start + i]);
