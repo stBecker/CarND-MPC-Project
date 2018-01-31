@@ -21,7 +21,7 @@ double dt = 0.1;
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 
-const double ref_v = 60;
+const double ref_v = 40;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -262,8 +262,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   //
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
-
-  // Use predicted steering and acceleration values at time step t+1
   vector<double> res = { solution.x[delta_start], solution.x[a_start] };
   for (size_t i = 0; i < N-1; i++)
   {

@@ -119,13 +119,11 @@ int main() {
           const int poly_order = 3;
           auto coeffs = polyfit(ptsx_vec, ptsy_vec, poly_order);
 
-          // use predicted vehicle position 100 miliseconds later
-          double dt = 0.1;
-          const double Lf = 2.67;
-          double px_vehicle = 0.0 + v*cos(0)*dt;
-          double py_vehicle = 0.0 + v*sin(0)*dt;
-          double psi_vehicle = 0.0 + v / Lf*delta*dt;
-          double v_vehicle = v + a*dt;
+          double v_vehicle = v;
+          double psi_vehicle = 0.0;
+          double px_vehicle = 0.0;
+          double py_vehicle = 0.0;
+
           double cte = polyeval(coeffs, px_vehicle) - py_vehicle;
           double f_prime = coeffs[1] + 2 * coeffs[2] * px_vehicle + 3 * coeffs[3] * px_vehicle*px_vehicle;
           double epsi = psi_vehicle - atan(f_prime);
