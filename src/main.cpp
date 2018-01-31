@@ -91,6 +91,8 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          double delta = j[1]["steering_angle"];
+          double a = j[1]["throttle"];
 
           // transform from world to vehicle coordinates
           Eigen::VectorXd ptsx_vec(ptsx.size());
@@ -117,14 +119,19 @@ int main() {
           const int poly_order = 3;
           auto coeffs = polyfit(ptsx_vec, ptsy_vec, poly_order);
 
-          const double px_vehicle = 0.0;
-          const double py_vehicle = 0.0;
-          const double psi_vehicle = 0.0;
+          // use predicted vehicle position 100 miliseconds later
+          double dt = 0.1;
+          const double Lf = 2.67;
+          double px_vehicle = 0.0 + v*cos(0)*dt;
+          double py_vehicle = 0.0 + v*sin(0)*dt;
+          double psi_vehicle = 0.0 + v / Lf*delta*dt;
+          double v_vehicle = v + a*dt;
           double cte = polyeval(coeffs, px_vehicle) - py_vehicle;
-          double epsi = psi_vehicle - atan(coeffs[1]);
+          double f_prime = coeffs[1] + 2 * coeffs[2] * px_vehicle + 3 * coeffs[3] * px_vehicle*px_vehicle;
+          double epsi = psi_vehicle - atan(f_prime);
 
           Eigen::VectorXd state(6);
-          state << px_vehicle, py_vehicle, psi_vehicle, v, cte, epsi;
+          state << px_vehicle, py_vehicle, psi_vehicle, v_vehicle, cte, epsi;
           auto vars = mpc.Solve(state, coeffs);
 
           double steer_value = vars[0];
