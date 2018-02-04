@@ -19,7 +19,7 @@ The indepentent variables to optimize (the actuators) are the steering angle del
 
 2. Timestep Length and Elapsed Duration (N & dt)
 	
-For the timestep length a value of 9 was chose, with a duration of 0.1 seconds.
+For the timestep length a value of 10 was chose, with a duration of 0.1 seconds.
 The goal was to achieve a reasonably low resolution, but not planning too far ahead into the future.
 With larger values for N (> 20) the calculated path would become very unstable, considerably diverging from the reference line.
 Larger values for dt (> 0.5) made the calculated path unstable as well.
@@ -53,5 +53,20 @@ the car) and flip the sign to convert from a counterclockwise to a clockwise rep
 
 4. Model Predictive Control with Latency
 	
-The model is able to safely drive the car at ~40mph without further modifications, even when adding a 100ms latency.
-The latency probably is small enough that the model can easily correct the trajectory.
+The model is able to safely drive the car at ~70mph.
+
+To account for latency, the future state of the vehicle is predicted and the subsequent model fitting is done
+with the predicted state variables instead of the actual ones, which would be obsolete by the time the vehicle
+receives the actuator inputs.
+
+For an accurate estimation of the latency the average latency of previous messages is used:
+
+	mpc.n_iterations_++;
+	int latency_in_ms = mpc.total_duration_/mpc.n_iterations_;
+	double dt = latency_in_ms / 1000.0;
+	cout << "Estimated latency: " << latency_in_ms << endl;
+	double px1 = px + v*cos(psi)*dt;
+	double py1 = py + v*sin(psi)*dt;
+	double psi1 = psi + v / mpc.Lf_*delta*dt;
+	double v1 = v + a*dt;
+

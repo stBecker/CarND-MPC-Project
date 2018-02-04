@@ -97,16 +97,15 @@ int main() {
           // v is in mph, convert to m/s
           v *= 0.44704;
           double delta = j[1]["steering_angle"];
-          // simulation angles are clockwise, flip to match equations
+          // simulation angles are clockwise, flip sign to match equations
           delta = -delta;
           double a = j[1]["throttle"];
 
           // Update position to account for latency
           mpc.n_iterations_++;
-
           int latency_in_ms = mpc.total_duration_/mpc.n_iterations_;
-          double dt = latency_in_ms / 1000.0;
           cout << "Estimated latency: " << latency_in_ms << endl;
+          double dt = latency_in_ms / 1000.0;
           double px1 = px + v*cos(psi)*dt;
           double py1 = py + v*sin(psi)*dt;
           double psi1 = psi + v / mpc.Lf_*delta*dt;
