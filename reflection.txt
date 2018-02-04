@@ -1,0 +1,57 @@
+1. The Model
+	
+A simple kinematic bicycle mode, without dynamics like tire slip etc., was chosen for this project.
+
+The state variable for this model are the x,y position, the orientation psi, the velocity, the cross track error 
+and the difference between the current and desired orientation epsi.
+
+The update equations are given below:
+
+x_[t] = x[t-1] + v[t-1] * cos(psi[t-1]) * dt
+y_[t] = y[t-1] + v[t-1] * sin(psi[t-1]) * dt
+psi_[t] = psi[t-1] + v[t-1] / lf * delta[t-1] * dt
+v_[t] = v[t-1] + a[t-1] * dt
+cte[t] = f(x[t-1]) - y[t-1] + v[t-1] * sin(epsi[t-1]) * dt
+epsi[t] = psi[t] - psides[t-1] + v[t-1] * delta[t-1] / lf * dt
+
+The indepentent variables to optimize (the actuators) are the steering angle delta and the acceleration (throttle) a.
+
+
+2. Timestep Length and Elapsed Duration (N & dt)
+	
+For the timestep length a value of 9 was chose, with a duration of 0.1 seconds.
+The goal was to achieve a reasonably low resolution, but not planning too far ahead into the future.
+With larger values for N (> 20) the calculated path would become very unstable, considerably diverging from the reference line.
+Larger values for dt (> 0.5) made the calculated path unstable as well.
+
+
+3. MPC Preprocessing
+
+The input waypoints were given in world coordinates; using the coordinates of the vehicle and its orientation with respect
+to the world coordinate frame, the waypoints were transformed to a coordinate system with the vehicle at the origin and the
+x-axis pointing in the vehicles direction of driving:
+
+	for (size_t i = 0; i < ptsx.size(); i++)
+	{
+	double x_world = ptsx[i] - px;
+	double y_world = ptsy[i] - py;
+	double rotation_angle = -psi;
+
+	double x_vehicle = x_world*cos(rotation_angle) - y_world*sin(rotation_angle);
+	double y_vehicle = x_world*sin(rotation_angle) + y_world*cos(rotation_angle);
+
+	ptsx_vec(i) = x_vehicle;
+	ptsy_vec(i) = y_vehicle;
+	}
+
+The simulator expects the steering angle to be between -1 and 1 given in a clockwise coordinate system.
+Thus it was necessary to normalize the calculated steering angle by 25 degrees (the maximum possible steering angle for
+the car) and flip the sign to convert from a counterclockwise to a clockwise representation.
+
+	msgJson["steering_angle"] = -steer_value / deg2rad(25);
+
+
+4. Model Predictive Control with Latency
+	
+The model is able to safely drive the car at ~40mph, even when adding a 100ms latency.
+The latency probably is small enough that the model can easily correct the trajectory.
