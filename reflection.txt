@@ -53,5 +53,5 @@ the car) and flip the sign to convert from a counterclockwise to a clockwise rep
 
 4. Model Predictive Control with Latency
 	
-The model is able to safely drive the car at ~40mph, even when adding a 100ms latency.
+The model is able to safely drive the car at ~40mph without further modifications, even when adding a 100ms latency.
 The latency probably is small enough that the model can easily correct the trajectory.
