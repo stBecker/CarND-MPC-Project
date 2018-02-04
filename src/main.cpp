@@ -73,6 +73,9 @@ int main() {
 
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
+    // measure time for latency estimation
+    auto start_time = std::chrono::system_clock::now();
+
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -91,17 +94,32 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          // v is in mph, convert to m/s
+          v *= 0.44704;
           double delta = j[1]["steering_angle"];
+          // simulation angles are clockwise, flip to match equations
+          delta = -delta;
           double a = j[1]["throttle"];
+
+          // Update position to account for latency
+          mpc.n_iterations_++;
+
+          int latency_in_ms = mpc.total_duration_/mpc.n_iterations_;
+          double dt = latency_in_ms / 1000.0;
+          cout << "Estimated latency: " << latency_in_ms << endl;
+          double px1 = px + v*cos(psi)*dt;
+          double py1 = py + v*sin(psi)*dt;
+          double psi1 = psi + v / mpc.Lf_*delta*dt;
+          double v1 = v + a*dt;
 
           // transform from world to vehicle coordinates
           Eigen::VectorXd ptsx_vec(ptsx.size());
           Eigen::VectorXd ptsy_vec(ptsy.size());
           for (size_t i = 0; i < ptsx.size(); i++)
           {
-            double x_world = ptsx[i] - px;
-            double y_world = ptsy[i] - py;
-            double rotation_angle = -psi;
+            double x_world = ptsx[i] - px1;
+            double y_world = ptsy[i] - py1;
+            double rotation_angle = -psi1;
 
             double x_vehicle = x_world*cos(rotation_angle) - y_world*sin(rotation_angle);
             double y_vehicle = x_world*sin(rotation_angle) + y_world*cos(rotation_angle);
@@ -119,7 +137,6 @@ int main() {
           const int poly_order = 3;
           auto coeffs = polyfit(ptsx_vec, ptsy_vec, poly_order);
 
-          double v_vehicle = v;
           double psi_vehicle = 0.0;
           double px_vehicle = 0.0;
           double py_vehicle = 0.0;
@@ -129,7 +146,7 @@ int main() {
           double epsi = psi_vehicle - atan(f_prime);
 
           Eigen::VectorXd state(6);
-          state << px_vehicle, py_vehicle, psi_vehicle, v_vehicle, cte, epsi;
+          state << px_vehicle, py_vehicle, psi_vehicle, v1, cte, epsi;
           auto vars = mpc.Solve(state, coeffs);
 
           double steer_value = vars[0];
@@ -180,6 +197,12 @@ int main() {
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
           this_thread::sleep_for(chrono::milliseconds(100));
+
+          auto end_time = std::chrono::system_clock::now();
+          std::chrono::duration<double> diff = end_time - start_time;
+          long long duration = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
+          mpc.total_duration_ += duration;
+
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
